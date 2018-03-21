@@ -43,6 +43,7 @@
 #include <errno.h>
 #include "openamp/hil.h"
 #include "metal/alloc.h"
+#include "metal/cache.h"
 #include "metal/irq.h"
 #include "metal/atomic.h"
 
@@ -123,7 +124,11 @@ int _ipi_handler(int vect_id, void *data)
 	(void) vect_id;
 
 	atomic_flag_clear((atomic_uint *)&(intr_info->data));
-
+	if (vect_id == 0)//vdev interrupt
+	{
+		struct virtio_device *vdev = (struct virtio_device *)intr_info->dev;
+		vdev->func->set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
+	}
 	//ipi_counter++;
 	return 0;
 }
@@ -203,6 +208,11 @@ extern char zynq_trampoline_end;
 static int _boot_cpu(struct hil_proc *proc, unsigned int load_addr)
 {
 	/* FIXME: Will need to add the boot_cpu implementation back */
+	#define CPU2_JUMP_ADDRESS      0xFFFFFFF0
+	HIL_MEM_WRITE32((char *)CPU2_JUMP_ADDRESS, load_addr);
+	//metal_cache_flush(CPU2_JUMP_ADDRESS, 4);
+	metal_cache_flush(0, 0);
+	asm("sev");
 #if 0
 	unsigned int reg;
 	unsigned int tramp_size;
@@ -231,10 +241,10 @@ static int _boot_cpu(struct hil_proc *proc, unsigned int load_addr)
 	unlock_slcr();
 
 	reg = HIL_MEM_READ32(ESAL_DP_SLCR_BASE + A9_CPU_SLCR_RESET_CTRL);
-	reg &= ~(A9_CPU_SLCR_CLK_STOP << cpu_id);
+	reg &= ~(A9_CPU_SLCR_CLK_STOP << proc->cpu_id);
 	HIL_MEM_WRITE32(ESAL_DP_SLCR_BASE + A9_CPU_SLCR_RESET_CTRL, reg);
 	/* De-assert reset signal and start clock to start the core */
-	reg &= ~(A9_CPU_SLCR_RST << cpu_id);
+	reg &= ~(A9_CPU_SLCR_RST << proc->cpu_id);
 	HIL_MEM_WRITE32(ESAL_DP_SLCR_BASE + A9_CPU_SLCR_RESET_CTRL, reg);
 
 	lock_slcr();
@@ -256,7 +266,7 @@ static void _shutdown_cpu(struct hil_proc *proc)
 
 	reg = HIL_MEM_READ32(ESAL_DP_SLCR_BASE + A9_CPU_SLCR_RESET_CTRL);
 	/* Assert reset signal and stop clock to halt the core */
-	reg |= (A9_CPU_SLCR_CLK_STOP | A9_CPU_SLCR_RST) << cpu_id;
+	reg |= (/*A9_CPU_SLCR_CLK_STOP |*/ A9_CPU_SLCR_RST) << proc->cpu_id;
 	HIL_MEM_WRITE32(ESAL_DP_SLCR_BASE + A9_CPU_SLCR_RESET_CTRL, reg);
 
 	lock_slcr();

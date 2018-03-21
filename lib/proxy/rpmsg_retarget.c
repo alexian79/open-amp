@@ -150,37 +150,52 @@ int _read(int fd, char *buffer, int buflen)
 {
 	int payload_size = sizeof(struct _sys_rpc);
 	int retval = -1;
+	int bytes_to_read = buflen;
 
 	if (!buffer || !buflen)
 		return retval;
 	if (!rpc_data)
 		return retval;
+	
+	while(bytes_to_read > 0)
+	{
+		/* Construct rpc payload */
+		rpc_data->rpc->id = READ_SYSCALL_ID;
+		rpc_data->rpc->sys_call_args.int_field1 = fd;
+		rpc_data->rpc->sys_call_args.int_field2 = bytes_to_read + payload_size < RPC_BUFF_SIZE ? bytes_to_read : RPC_BUFF_SIZE - payload_size;
+		rpc_data->rpc->sys_call_args.data_len = 0;	/*not used */
 
-	/* Construct rpc payload */
-	rpc_data->rpc->id = READ_SYSCALL_ID;
-	rpc_data->rpc->sys_call_args.int_field1 = fd;
-	rpc_data->rpc->sys_call_args.int_field2 = buflen;
-	rpc_data->rpc->sys_call_args.data_len = 0;	/*not used */
+		/* Transmit rpc request */
+		metal_mutex_acquire(&rpc_data->rpc_lock);
+		send_rpc((void *)rpc_data->rpc, payload_size);
+		metal_mutex_release(&rpc_data->rpc_lock);
 
-	/* Transmit rpc request */
-	metal_mutex_acquire(&rpc_data->rpc_lock);
-	send_rpc((void *)rpc_data->rpc, payload_size);
-	metal_mutex_release(&rpc_data->rpc_lock);
+		/* Wait for response from proxy on master */
+		rpmsg_retarget_wait(rpc_data);
 
-	/* Wait for response from proxy on master */
-	rpmsg_retarget_wait(rpc_data);
-
-	/* Obtain return args and return to caller */
-	if (rpc_data->rpc_response->id == READ_SYSCALL_ID) {
-		if (rpc_data->rpc_response->sys_call_args.int_field1 > 0) {
-			memcpy(buffer,
-			       rpc_data->rpc_response->sys_call_args.data,
-			       rpc_data->rpc_response->sys_call_args.data_len);
+		/* Obtain return args and return to caller */
+		if (rpc_data->rpc_response->id == READ_SYSCALL_ID) {
+			if (rpc_data->rpc_response->sys_call_args.int_field1 > 0) {
+				memcpy(buffer,
+					   rpc_data->rpc_response->sys_call_args.data,
+					   rpc_data->rpc_response->sys_call_args.data_len);
+			}
+			retval = rpc_data->rpc_response->sys_call_args.int_field1;
+			if (retval < 0) return retval;
+			bytes_to_read -= retval;
+			buffer += retval;
+			// check we have amount of bytes we requested to read
+			if (retval != rpc_data->rpc->sys_call_args.int_field2)
+			{
+				return buflen - bytes_to_read;
+			}
+			retval = buflen - bytes_to_read;
 		}
-
-		retval = rpc_data->rpc_response->sys_call_args.int_field1;
+		else
+		{
+			break;
+		}
 	}
-
 	return retval;
 }
 

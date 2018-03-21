@@ -40,7 +40,7 @@
 #include "metal/list.h"
 
 /* Configurable parameters */
-#define RPMSG_BUFFER_SIZE                       512
+#define RPMSG_BUFFER_SIZE                       16384//512
 #define RPMSG_MAX_VQ_PER_RDEV                   2
 #define RPMSG_NS_EPT_ADDR                       0x35
 #define RPMSG_ADDR_BMP_SIZE                     4

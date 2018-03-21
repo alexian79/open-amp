@@ -69,7 +69,7 @@ struct rpmsg_hdr {
  * @rfu: reserved for future usage
  * @idx: index of a buffer (not to be returned back to the buffer's pool)
  *
- * This structure has been introduced to keep the backward compatibility. 
+ * This structure has been introduced to keep the backward compatibility.
  * It could be integrated into rpmsg_hdr struct, replacing the reserved field.
  */
 struct rpmsg_hdr_reserved

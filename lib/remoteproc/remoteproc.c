@@ -177,6 +177,7 @@ int remoteproc_init(char *fw_name, struct hil_proc *proc,
 	if (rproc) {
 		memset((void *)rproc, 0x00, sizeof(struct remote_proc));
 		/* Create proc instance */
+		rproc->proc = proc;
 		status = hil_init_proc(proc);
 		if (!status) {
 			/* Retrieve firmware attributes */
@@ -300,8 +301,8 @@ int remoteproc_boot(struct remote_proc *rproc)
 
 				/* Initialize RPMSG "messaging" component */
 
-				/* It is a work-around to work with remote Linux context. 
-				   Since the upstream Linux rpmsg implementation always 
+				/* It is a work-around to work with remote Linux context.
+				   Since the upstream Linux rpmsg implementation always
 				   assumes itself to be an rpmsg master, we initialize
 				   the remote device as an rpmsg master for remote Linux
 				   configuration only. */

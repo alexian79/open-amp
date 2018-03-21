@@ -150,6 +150,11 @@ int rpmsg_rdev_init(struct hil_proc *proc,
 			return RPMSG_ERR_NO_MEM;
 		}
 	}
+	else
+	{
+		proc->vdev.intr_info.dev = (struct metal_device *)virt_dev;
+		hil_set_vdev_ipi(proc, 0, 0, NULL);
+	}
 
 	if (!rpmsg_rdev_remote_ready(rdev_loc))
 		return RPMSG_ERR_DEV_INIT;
@@ -556,4 +561,3 @@ void rpmsg_rdev_reset(struct virtio_device *dev)
 
 	return;
 }
-

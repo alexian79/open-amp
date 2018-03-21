@@ -3,7 +3,7 @@
 #include "metal/atomic.h"
 
 /* RPC response buffer size */
-#define RPC_BUFF_SIZE 512
+#define RPC_BUFF_SIZE RPMSG_BUFFER_SIZE
 
 /* System call definitions */
 #define OPEN_SYSCALL_ID     1

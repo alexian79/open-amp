@@ -567,7 +567,9 @@ static int elf_loader_load_sections(void *firmware,
 
 			/* Check if the section is part of runtime and is not section with
 			 * no-load attributes such as BSS or heap. */
-			if ((current->sh_type & SHT_NOBITS) == 0) {
+			if (   (current->sh_type == SHT_INIT_ARRAY)
+				|| (current->sh_type == SHT_FINI_ARRAY)
+				|| (current->sh_type & SHT_NOBITS) == 0) {
 				/* Compute the destination address where the section should
 				 * be copied. */
 				destination = (char *)(current->sh_addr);
